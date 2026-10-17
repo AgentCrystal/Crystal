@@ -47,7 +47,7 @@ public sealed class MultimodalToolExecutor : IMultimodalToolExecutor
         CancellationToken cancellationToken = default)
     {
         var snapshot = CollectionSnapshot.Create(calls, nameof(calls));
-        EnsureToolsRegistered(snapshot);
+        PreflightCalls(snapshot);
         cancellationToken.ThrowIfCancellationRequested();
 
         return _options.Mode switch
@@ -63,13 +63,15 @@ public sealed class MultimodalToolExecutor : IMultimodalToolExecutor
         };
     }
 
-    private void EnsureToolsRegistered(IReadOnlyList<MultimodalToolCall> calls)
+    private void PreflightCalls(IReadOnlyList<MultimodalToolCall> calls)
     {
         foreach (var call in calls)
         {
-            if (_catalog.Find(call.Name) is null)
+            var definition = _catalog.FindDefinition(call.Name)
+                ?? throw new MultimodalToolNotFoundException();
+            if (call.InputKind != definition.Input.Kind)
             {
-                throw new MultimodalToolNotFoundException();
+                throw new ToolInputKindMismatchException();
             }
         }
     }

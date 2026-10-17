@@ -47,7 +47,7 @@ public sealed class ToolExecutor : IToolExecutor
         CancellationToken cancellationToken = default)
     {
         var snapshot = CollectionSnapshot.Create(calls, nameof(calls));
-        EnsureToolsRegistered(snapshot);
+        PreflightCalls(snapshot);
         cancellationToken.ThrowIfCancellationRequested();
 
         return _options.Mode switch
@@ -63,13 +63,15 @@ public sealed class ToolExecutor : IToolExecutor
         };
     }
 
-    private void EnsureToolsRegistered(IReadOnlyList<ToolCall> calls)
+    private void PreflightCalls(IReadOnlyList<ToolCall> calls)
     {
         foreach (var call in calls)
         {
-            if (_catalog.Find(call.Name) is null)
+            var definition = _catalog.FindDefinition(call.Name)
+                ?? throw new ToolNotFoundException();
+            if (call.InputKind != definition.Input.Kind)
             {
-                throw new ToolNotFoundException();
+                throw new ToolInputKindMismatchException();
             }
         }
     }

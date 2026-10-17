@@ -432,6 +432,8 @@ and every stream delta reports it. ITool receives exact raw model arguments in
 ToolCall.Arguments and returns exact caller-owned text in ToolOutput. The Agent
 never repairs either value. Run usage is available only when every attempted
 model call reports usage.
+The standard text and multimodal executors validate the complete batch,
+including each call name and input kind, before invoking any tool.
 Tool executors check cancellation at dispatch boundaries, including after a
 caller policy returns; a started tool's side effects remain caller-owned.
 

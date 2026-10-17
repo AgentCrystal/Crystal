@@ -7,6 +7,7 @@ namespace Crystal.Tools;
 /// </summary>
 public sealed class ToolCatalog
 {
+    private readonly IReadOnlyDictionary<string, ToolDefinition> _definitionsByName;
     private readonly IReadOnlyDictionary<string, ITool> _tools;
 
     /// <summary>
@@ -17,6 +18,9 @@ public sealed class ToolCatalog
     {
         var snapshot = CollectionSnapshot.Create(tools, nameof(tools));
         var registrations = new Dictionary<string, ITool>(
+            snapshot.Count,
+            StringComparer.Ordinal);
+        var definitionsByName = new Dictionary<string, ToolDefinition>(
             snapshot.Count,
             StringComparer.Ordinal);
         var definitions = new ToolDefinition[snapshot.Count];
@@ -37,9 +41,11 @@ public sealed class ToolCatalog
             }
 
             definitions[index] = definition;
+            definitionsByName.Add(definition.Name, definition);
         }
 
         _tools = registrations;
+        _definitionsByName = definitionsByName;
         Definitions = Array.AsReadOnly(definitions);
     }
 
@@ -58,4 +64,7 @@ public sealed class ToolCatalog
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         return _tools.GetValueOrDefault(name);
     }
+
+    internal ToolDefinition? FindDefinition(string name) =>
+        _definitionsByName.GetValueOrDefault(name);
 }

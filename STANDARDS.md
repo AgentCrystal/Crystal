@@ -228,8 +228,9 @@ Tests must prove:
 - Candidate selection is caller-supplied.
 - Tool execution mode and concurrency are explicit.
 - Validate the complete tool batch against the immutable catalog before any
-  text or multimodal tool invocation starts. Registration preflight does not
-  imply transactional execution after invocation begins.
+  text or multimodal tool invocation starts, including each call's input kind
+  against its registered definition. Batch preflight does not imply
+  transactional execution after invocation begins.
 - Concurrent results preserve original call order.
 - Concurrent tool dispatch bounds worker tasks by the configured concurrency;
   queued calls do not each allocate a waiting task.

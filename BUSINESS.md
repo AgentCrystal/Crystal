@@ -187,10 +187,11 @@ depending on tool execution, Agent runtime, or Harness composition.
 
 ### Tools
 
-- Caller-authored definitions and JSON input schemas.
+- Caller-authored definitions with JSON-schema or unstructured-text input.
 - Raw model-generated argument text.
 - Immutable catalogs and explicit serial or concurrent dispatch.
-- Whole-batch registration checks before any text or multimodal tool starts.
+- Whole-batch registration and input-kind checks before any text or multimodal
+  tool starts.
 - Optional caller-owned approval and exception-to-output policies.
 - Textual outputs correlated to model tool calls.
 - A separate multimodal tool family with optional ordered typed call content,

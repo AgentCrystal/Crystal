@@ -6,6 +6,7 @@ namespace Crystal.Multimodal.Tools;
 /// <summary>Provides immutable lookup for caller-owned multimodal tools.</summary>
 public sealed class MultimodalToolCatalog
 {
+    private readonly IReadOnlyDictionary<string, ToolDefinition> _definitionsByName;
     private readonly IReadOnlyDictionary<string, IMultimodalTool> _tools;
 
     /// <summary>Initializes a multimodal tool catalog.</summary>
@@ -14,6 +15,9 @@ public sealed class MultimodalToolCatalog
     {
         var snapshot = CollectionSnapshot.Create(tools, nameof(tools));
         var registrations = new Dictionary<string, IMultimodalTool>(
+            snapshot.Count,
+            StringComparer.Ordinal);
+        var definitionsByName = new Dictionary<string, ToolDefinition>(
             snapshot.Count,
             StringComparer.Ordinal);
         var definitions = new ToolDefinition[snapshot.Count];
@@ -34,9 +38,11 @@ public sealed class MultimodalToolCatalog
             }
 
             definitions[index] = definition;
+            definitionsByName.Add(definition.Name, definition);
         }
 
         _tools = registrations;
+        _definitionsByName = definitionsByName;
         Definitions = Array.AsReadOnly(definitions);
     }
 
@@ -51,4 +57,7 @@ public sealed class MultimodalToolCatalog
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         return _tools.GetValueOrDefault(name);
     }
+
+    internal ToolDefinition? FindDefinition(string name) =>
+        _definitionsByName.GetValueOrDefault(name);
 }
