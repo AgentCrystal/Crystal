@@ -18,9 +18,9 @@ public sealed class ToolExecutorSchedulingTests
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var execution = executor.ExecuteAsync(
             [
-                new ToolCall("first", "known", "{}"),
-                new ToolCall("second", "known", "{}"),
-                new ToolCall("third", "known", "{}")
+                new ToolCall("first", "known", "{}", ToolInputKind.Json),
+                new ToolCall("second", "known", "{}", ToolInputKind.Json),
+                new ToolCall("third", "known", "{}", ToolInputKind.Json)
             ], cancellation.Token);
 
         await gate.WaitForStartAsync("first").WaitAsync(cancellation.Token);
@@ -45,9 +45,12 @@ public sealed class ToolExecutorSchedulingTests
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var execution = executor.ExecuteAsync(
             [
-                new MultimodalToolCall("first", "known", "{}"),
-                new MultimodalToolCall("second", "known", "{}"),
-                new MultimodalToolCall("third", "known", "{}")
+                new MultimodalToolCall(
+                    "first", "known", "{}", ToolInputKind.Json),
+                new MultimodalToolCall(
+                    "second", "known", "{}", ToolInputKind.Json),
+                new MultimodalToolCall(
+                    "third", "known", "{}", ToolInputKind.Json)
             ], cancellation.Token);
 
         await gate.WaitForStartAsync("first").WaitAsync(cancellation.Token);
@@ -72,9 +75,9 @@ public sealed class ToolExecutorSchedulingTests
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var execution = executor.ExecuteAsync(
             [
-                new ToolCall("first", "known", "{}"),
-                new ToolCall("second", "known", "{}"),
-                new ToolCall("third", "known", "{}")
+                new ToolCall("first", "known", "{}", ToolInputKind.Json),
+                new ToolCall("second", "known", "{}", ToolInputKind.Json),
+                new ToolCall("third", "known", "{}", ToolInputKind.Json)
             ],
             cancellation.Token);
 
@@ -108,9 +111,12 @@ public sealed class ToolExecutorSchedulingTests
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var execution = executor.ExecuteAsync(
             [
-                new MultimodalToolCall("first", "known", "{}"),
-                new MultimodalToolCall("second", "known", "{}"),
-                new MultimodalToolCall("third", "known", "{}")
+                new MultimodalToolCall(
+                    "first", "known", "{}", ToolInputKind.Json),
+                new MultimodalToolCall(
+                    "second", "known", "{}", ToolInputKind.Json),
+                new MultimodalToolCall(
+                    "third", "known", "{}", ToolInputKind.Json)
             ],
             cancellation.Token);
 
@@ -176,7 +182,7 @@ public sealed class ToolExecutorSchedulingTests
             _gate = gate;
             _failingCallId = failingCallId;
             using var schema = JsonDocument.Parse("{}");
-            Definition = new ToolDefinition("known", schema.RootElement);
+            Definition = ToolDefinition.Json("known", schema.RootElement);
         }
 
         public ToolDefinition Definition { get; }
@@ -205,7 +211,7 @@ public sealed class ToolExecutorSchedulingTests
             _gate = gate;
             _failingCallId = failingCallId;
             using var schema = JsonDocument.Parse("{}");
-            Definition = new ToolDefinition("known", schema.RootElement);
+            Definition = ToolDefinition.Json("known", schema.RootElement);
         }
 
         public ToolDefinition Definition { get; }

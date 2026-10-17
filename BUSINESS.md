@@ -81,7 +81,9 @@ depending on tool execution, Agent runtime, or Harness composition.
 ### Chat
 
 - Ordered text messages with open-ended roles.
-- Ordered reasoning, tool-call, and tool-result protocol items.
+- Ordered reasoning, tool-call, and tool-result protocol items. A tool
+  definition declares either a JSON-schema input or unstructured text input;
+  the call and stream preserve that portable shape.
 - Multiple candidates and open-ended finish reasons.
 - Non-streaming and optional typed streaming client contracts.
 
@@ -92,7 +94,7 @@ depending on tool execution, Agent runtime, or Harness composition.
 - Agent and Harness requests carry the same requirement unchanged to each model
   turn. Crystal does not add formatting prompts or repair invalid model output.
 - The requirement governs a normal final text candidate, independently of tool
-  argument schemas. An adapter rejects an unsupported request or reports a
+  input definitions. An adapter rejects an unsupported request or reports a
   provider failure if the response violates the requirement.
 
 ### Media and multimodal Chat

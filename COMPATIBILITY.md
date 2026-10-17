@@ -68,10 +68,12 @@ An adapter must reject the request when it cannot support the schema or combine
 the requirement with requested tools or modalities. If a provider returns a
 normal final candidate that violates the accepted requirement, the adapter
 reports failure rather than silently returning it. Crystal does not validate,
-repair, or add a formatting prompt. ToolDefinition.InputSchema governs tool
-arguments separately and does not imply strict tool-call enforcement. It also
-accepts an object or boolean JSON Schema root; Crystal preserves it without
-interpreting keywords or parsing model-generated argument text.
+repair, or add a formatting prompt. For a JSON-input tool,
+JsonToolInput.Schema governs tool arguments separately and does not imply
+strict tool-call enforcement. It also accepts an object or boolean JSON Schema
+root; Crystal preserves it without interpreting keywords or parsing
+model-generated argument text. A text-input tool has no JSON Schema; its raw
+argument text is caller-observed input.
 
 The [OpenAI structured-output guide](https://developers.openai.com/api/docs/guides/structured-outputs),
 [Claude structured-output guide](https://platform.claude.com/docs/en/build-with-claude/structured-outputs),
@@ -178,8 +180,10 @@ An adapter must:
 16. keep provider billing fields, media handles, model identifiers, and options
     outside portable results;
 17. assign stable zero-based indexes to multimodal message content, reasoning
-    parts, and tool-call content throughout a stream; and
-18. emit media content as complete typed content rather than media-byte deltas.
+    parts, and tool-call content throughout a stream;
+18. emit media content as complete typed content rather than media-byte deltas;
+19. preserve the declared tool input shape and reject an input kind it cannot
+    honor.
 
 ## Text and multimodal profiles
 
@@ -360,7 +364,14 @@ content arrives as complete indexed content blocks.
 
 ## Tool protocol compatibility
 
-- Tool definitions are caller-authored names, descriptions, and JSON schemas.
+- Tool definitions are caller-authored names, descriptions, and a ToolInput:
+  JsonToolInput with a JSON schema, or TextToolInput with no schema.
+- ToolInputKind identifies the shape on each complete call and on each stream
+  delta. A call's kind must match its definition. Every delta for one call must
+  report the same kind.
+- An adapter maps a supported input shape to its provider contract or rejects
+  the request. It must not reinterpret text arguments as JSON or wrap them
+  without caller direction.
 - Tool call identifiers and names are complete values in non-streaming output.
 - Model-generated arguments are raw strings because partial or invalid JSON is
   a valid intermediate model outcome.

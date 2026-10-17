@@ -188,6 +188,40 @@ public sealed class MultimodalAgentStreamingTests
     }
 
     [Fact]
+    public async Task StreamedTextToolInputIsReplayedExactly()
+    {
+        var client = new TextToolCallingStreamingClient();
+        var executor = new RecordingTextMultimodalToolExecutor();
+        var agent = new MultimodalAgent(
+            client,
+            (_, _) => ValueTask.FromResult(0),
+            executor);
+        var initial = new MultimodalMessage(
+            MultimodalChatRole.User,
+            [new TextContent("capture some text")]);
+        var request = new MultimodalAgentRunRequest(
+            Guid.NewGuid(),
+            [initial],
+            new MultimodalAgentRunLimits(2, 1, TimeSpan.FromMinutes(1)));
+
+        var result = await agent.RunAsync(request);
+
+        Assert.Equal(2, result.ModelCallCount);
+        Assert.Equal(1, result.ToolCallCount);
+        Assert.Same(
+            executor.Definitions[0],
+            Assert.Single(client.Requests[0].Tools));
+        var replayedCall = Assert.IsType<MultimodalToolCall>(
+            client.Requests[1].Items[1]);
+        Assert.Same(executor.Call, replayedCall);
+        Assert.Equal(ToolInputKind.Text, replayedCall.InputKind);
+        Assert.Equal(
+            "first line\nsecond line",
+            replayedCall.Arguments);
+        Assert.Same(executor.Result, client.Requests[1].Items[2]);
+    }
+
+    [Fact]
     public async Task UnlimitedLimitsAllowMultipleMultimodalModelAndToolAttempts()
     {
         var callImage = new ImageContent(new ImageMedia(
@@ -314,9 +348,11 @@ public sealed class MultimodalAgentStreamingTests
             Requests.Add(request);
             if (Requests.Count == 1)
             {
-                yield return new MultimodalToolCallDelta(0, 0, "call", "look", "{\"q\":");
+                yield return new MultimodalToolCallDelta(
+                    0, 0, "call", "look", "{\"q\":", ToolInputKind.Json);
                 yield return new MultimodalToolCallContentReceived(0, 0, 0, callImage);
-                yield return new MultimodalToolCallDelta(0, 0, "-1", "up", "\"x\"}");
+                yield return new MultimodalToolCallDelta(
+                    0, 0, "-1", "up", "\"x\"}", ToolInputKind.Json);
                 yield return new MultimodalChatCandidateCompleted(0, FinishReason.ToolCalls);
             }
             else
@@ -332,6 +368,65 @@ public sealed class MultimodalAgentStreamingTests
         }
     }
 
+    private sealed class TextToolCallingStreamingClient
+        : IStreamingMultimodalChatClient
+    {
+        public MultimodalChatCapabilities Capabilities { get; } =
+            CreateCapabilities(supportsTools: true);
+
+        public List<MultimodalChatRequest> Requests { get; } = [];
+
+        public Task<MultimodalChatResponse> CompleteAsync(
+            MultimodalChatRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The non-streaming path was called.");
+
+        public async IAsyncEnumerable<MultimodalChatStreamEvent> StreamAsync(
+            MultimodalChatRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            if (Requests.Count == 1)
+            {
+                yield return new MultimodalToolCallDelta(
+                    0,
+                    0,
+                    "call",
+                    "capture",
+                    "first line\n",
+                    ToolInputKind.Text);
+                yield return new MultimodalToolCallDelta(
+                    0,
+                    0,
+                    "",
+                    "",
+                    "second line",
+                    ToolInputKind.Text);
+                yield return new MultimodalChatCandidateCompleted(
+                    0,
+                    FinishReason.ToolCalls);
+            }
+            else
+            {
+                yield return new MultimodalMessageStarted(
+                    0,
+                    0,
+                    MultimodalChatRole.Assistant);
+                yield return new MultimodalMessageContentReceived(
+                    0,
+                    0,
+                    0,
+                    new TextContent("answer"));
+                yield return new MultimodalChatCandidateCompleted(
+                    0,
+                    FinishReason.Stop);
+            }
+
+            await Task.Yield();
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+    }
+
     private sealed class RecordingMultimodalToolExecutor : IMultimodalToolExecutor
     {
         private readonly ImageContent _resultImage;
@@ -340,7 +435,7 @@ public sealed class MultimodalAgentStreamingTests
         {
             _resultImage = resultImage;
             using var schema = JsonDocument.Parse("{}");
-            Definitions = [new ToolDefinition("lookup", schema.RootElement)];
+            Definitions = [ToolDefinition.Json("lookup", schema.RootElement)];
         }
 
         public IReadOnlyList<ToolDefinition> Definitions { get; }
@@ -357,6 +452,38 @@ public sealed class MultimodalAgentStreamingTests
             Result = new MultimodalToolResult(
                 Call.CallId,
                 [new TextContent("done"), _resultImage]);
+            IReadOnlyList<MultimodalToolResult> results = [Result];
+            return Task.FromResult(results);
+        }
+    }
+
+    private sealed class RecordingTextMultimodalToolExecutor
+        : IMultimodalToolExecutor
+    {
+        public RecordingTextMultimodalToolExecutor()
+        {
+            Definitions =
+                [ToolDefinition.Text("capture", "Captures text input.")];
+        }
+
+        public IReadOnlyList<ToolDefinition> Definitions { get; }
+
+        public MultimodalToolCall? Call { get; private set; }
+
+        public MultimodalToolResult? Result { get; private set; }
+
+        public Task<IReadOnlyList<MultimodalToolResult>> ExecuteAsync(
+            IEnumerable<MultimodalToolCall> calls,
+            CancellationToken cancellationToken = default)
+        {
+            Call = Assert.Single(calls);
+            Assert.Equal(ToolInputKind.Text, Call.InputKind);
+            Assert.Equal(
+                "first line\nsecond line",
+                Call.Arguments);
+            Result = new MultimodalToolResult(
+                Call.CallId,
+                [new TextContent("captured")]);
             IReadOnlyList<MultimodalToolResult> results = [Result];
             return Task.FromResult(results);
         }

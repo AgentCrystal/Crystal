@@ -107,10 +107,17 @@
 - Do not add a generic extension-data dictionary instead of a designed
   contract.
 - A caller-authored JsonOutputRequirement is a hard final-text constraint,
-  separate from tool input schemas. Snapshot its schema, forward it unchanged
-  through Agent and Harness, and reject unsupported adapter combinations.
-- JSON Schema values in output requirements and tool definitions have an object
-  or boolean root. Crystal copies but does not interpret their keywords.
+  separate from tool input definitions. Snapshot its schema, forward it
+  unchanged through Agent and Harness, and reject unsupported adapter
+  combinations.
+- JSON Schema values in output requirements and JSON-input tool definitions
+  have an object or boolean root. Crystal copies but does not interpret their
+  keywords.
+- Tool definitions use a closed ToolInput union: JsonToolInput carries a JSON
+  Schema and TextToolInput carries none. ToolInputKind records the shape on
+  calls and stream deltas. Do not add provider-specific grammar, format, or
+  custom-tool syntax to Crystal; adapters map a supported shape or reject the
+  request.
 - Public APIs require XML documentation before a preview package.
 
 ## Protocol provenance

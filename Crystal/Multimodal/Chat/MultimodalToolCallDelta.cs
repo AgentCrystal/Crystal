@@ -1,3 +1,5 @@
+using Crystal.Tools;
+
 namespace Crystal.Multimodal.Chat;
 
 /// <summary>Carries exact deltas for one streamed multimodal tool call.</summary>
@@ -9,21 +11,28 @@ public sealed record MultimodalToolCallDelta : MultimodalChatItemStreamEvent
     /// <param name="callIdDelta">The exact call-identifier delta.</param>
     /// <param name="nameDelta">The exact tool-name delta.</param>
     /// <param name="argumentsDelta">The exact raw-arguments delta.</param>
+    /// <param name="inputKind">
+    /// The portable input shape. Every delta for one call must report the same
+    /// value.
+    /// </param>
     public MultimodalToolCallDelta(
         int candidateIndex,
         int itemIndex,
         string callIdDelta,
         string nameDelta,
-        string argumentsDelta)
+        string argumentsDelta,
+        ToolInputKind inputKind)
         : base(candidateIndex, itemIndex)
     {
         ArgumentNullException.ThrowIfNull(callIdDelta, nameof(callIdDelta));
         ArgumentNullException.ThrowIfNull(nameDelta, nameof(nameDelta));
         ArgumentNullException.ThrowIfNull(argumentsDelta, nameof(argumentsDelta));
+        ArgumentNullException.ThrowIfNull(inputKind, nameof(inputKind));
 
         CallIdDelta = callIdDelta;
         NameDelta = nameDelta;
         ArgumentsDelta = argumentsDelta;
+        InputKind = inputKind;
     }
 
     /// <summary>Gets the exact call-identifier delta.</summary>
@@ -34,4 +43,7 @@ public sealed record MultimodalToolCallDelta : MultimodalChatItemStreamEvent
 
     /// <summary>Gets the exact raw-arguments delta.</summary>
     public string ArgumentsDelta { get; }
+
+    /// <summary>Gets the portable input shape of the call.</summary>
+    public ToolInputKind InputKind { get; }
 }

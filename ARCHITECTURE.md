@@ -392,7 +392,7 @@ reasoning are protocol items, not content modalities.
 Multimodal Chat uses a separate explicit capability contract under
 Crystal.Multimodal.Chat. IChatClient remains unchanged and text-only.
 Completion and both Chat request families accept the same optional hard JSON
-output requirement. It is independent of ToolDefinition.InputSchema and does
+output requirement. It is independent of the tool input definition and does
 not change message, tool, reasoning, or stream event shapes. Agents and
 Harnesses forward its exact value through every model turn. Crystal does not
 parse or repair provider output and never injects a formatting prompt.
@@ -413,7 +413,7 @@ does not open or transform media during embedding.
 
 Owns:
 
-- caller-authored ToolDefinition values;
+- caller-authored ToolDefinition and ToolInput values;
 - model-facing ToolCall and ToolResult protocol items;
 - ITool and ToolOutput;
 - immutable ToolCatalog lookup;
@@ -421,10 +421,17 @@ Owns:
 - explicit serial or bounded-concurrent execution options; and
 - optional caller-supplied invocation approval and exception mapping policies.
 
-ToolDefinition, ToolCall, ToolResult, and ToolResultStatus are compiled into the
-Crystal assembly. MultimodalToolCall, MultimodalToolResult, and
+ToolDefinition, ToolInput, JsonToolInput, TextToolInput, ToolInputKind,
+ToolCall, ToolResult, and ToolResultStatus are compiled into the Crystal
+assembly. MultimodalToolCall, MultimodalToolResult, and
 MultimodalToolResultStatus are also compiled into Crystal. The executable text
 and multimodal infrastructure is compiled into Crystal.Tools.
+
+ToolDefinition carries a closed ToolInput union. JsonToolInput carries a
+caller-authored JSON Schema; TextToolInput carries no schema. ToolCall,
+MultimodalToolCall, and their stream deltas preserve the portable input kind.
+Crystal does not parse model arguments; adapters map a supported shape or
+reject the request.
 
 The standard text and multimodal executors check every call name against the
 immutable catalog before starting any call in a batch, whether dispatch is

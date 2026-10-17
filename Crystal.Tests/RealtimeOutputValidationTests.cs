@@ -2,6 +2,7 @@ using Crystal.Decorators;
 using Crystal.Multimodal;
 using Crystal.Multimodal.Tools;
 using Crystal.Realtime;
+using Crystal.Tools;
 
 namespace Crystal.Tests;
 
@@ -13,7 +14,11 @@ public sealed class RealtimeOutputValidationTests
         var first = Content("first", 0, "exact text");
         var second = Content("second", 0, "other text");
         var tool = new RealtimeOutputToolCallReceived(
-            new MultimodalToolCall("call-1", "caller-tool", "{}"));
+            new MultimodalToolCall(
+                "call-1",
+                "caller-tool",
+                "{}",
+                ToolInputKind.Json));
         var later = Content("first", 1, "later text");
         var firstCompleted = new RealtimeOutputTurnCompleted("first");
         var secondCompleted = new RealtimeOutputTurnCompleted("second");

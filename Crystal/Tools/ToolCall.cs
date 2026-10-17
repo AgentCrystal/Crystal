@@ -15,18 +15,24 @@ public sealed record ToolCall : ChatItem
     /// <param name="arguments">
     /// The exact raw model-generated argument text.
     /// </param>
+    /// <param name="inputKind">
+    /// The portable input shape.
+    /// </param>
     public ToolCall(
         string callId,
         string name,
-        string arguments)
+        string arguments,
+        ToolInputKind inputKind)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(callId, nameof(callId));
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNull(arguments, nameof(arguments));
+        ArgumentNullException.ThrowIfNull(inputKind, nameof(inputKind));
 
         CallId = callId;
         Name = name;
         Arguments = arguments;
+        InputKind = inputKind;
     }
 
     /// <summary>
@@ -43,4 +49,11 @@ public sealed record ToolCall : ChatItem
     /// Gets the exact raw argument text.
     /// </summary>
     public string Arguments { get; }
+
+    /// <summary>
+    /// Gets the portable input shape of the call. Text input means
+    /// <see cref="Arguments"/> is unstructured text; JSON input means it is
+    /// caller-observed JSON text.
+    /// </summary>
+    public ToolInputKind InputKind { get; }
 }

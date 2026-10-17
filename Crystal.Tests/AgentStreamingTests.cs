@@ -137,6 +137,53 @@ public sealed class AgentStreamingTests
     }
 
     [Fact]
+    public async Task StreamedTextToolInputIsReplayedExactly()
+    {
+        var client = new TextToolCallingStreamingClient();
+        var executor = new RecordingTextToolExecutor();
+        var agent = new Agent(
+            client,
+            (_, _) => ValueTask.FromResult(0),
+            executor);
+        var initial = new ChatMessage(ChatRole.User, "capture some text");
+        var request = new AgentRunRequest(
+            Guid.NewGuid(),
+            [initial],
+            new AgentRunLimits(2, 1, TimeSpan.FromMinutes(1)));
+
+        var result = await agent.RunAsync(request);
+
+        Assert.Equal(2, result.ModelCallCount);
+        Assert.Equal(1, result.ToolCallCount);
+        Assert.Same(executor.Definitions[0], client.Requests[0].Tools[0]);
+        var replayedCall = Assert.IsType<ToolCall>(client.Requests[1].Items[1]);
+        Assert.Same(executor.Call, replayedCall);
+        Assert.Equal(ToolInputKind.Text, replayedCall.InputKind);
+        Assert.Equal(
+            "first line\nsecond line",
+            replayedCall.Arguments);
+        Assert.Same(executor.Result, client.Requests[1].Items[2]);
+    }
+
+    [Fact]
+    public async Task StreamedToolCallRejectsAChangedInputKind()
+    {
+        var agent = new Agent(
+            new ChangedInputKindStreamingClient(),
+            (_, _) => ValueTask.FromResult(0),
+            new RecordingToolExecutor());
+        var request = new AgentRunRequest(
+            Guid.NewGuid(),
+            [new ChatMessage(ChatRole.User, "question")],
+            new AgentRunLimits(1, 1, TimeSpan.FromMinutes(1)));
+
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => agent.RunAsync(request));
+
+        Assert.Contains("changed its input kind", failure.Message);
+    }
+
+    [Fact]
     public async Task UnlimitedLimitsAllowMultipleModelAndToolAttempts()
     {
         var client = new ToolCallingStreamingClient();
@@ -253,8 +300,10 @@ public sealed class AgentStreamingTests
             Requests.Add(request);
             if (Requests.Count == 1)
             {
-                yield return new ChatToolCallDelta(0, 0, "call", "look", "{\"q\":");
-                yield return new ChatToolCallDelta(0, 0, "-1", "up", "\"x\"}");
+                yield return new ChatToolCallDelta(
+                    0, 0, "call", "look", "{\"q\":", ToolInputKind.Json);
+                yield return new ChatToolCallDelta(
+                    0, 0, "-1", "up", "\"x\"}", ToolInputKind.Json);
                 yield return new ChatCandidateCompleted(0, FinishReason.ToolCalls);
             }
             else
@@ -268,12 +317,91 @@ public sealed class AgentStreamingTests
         }
     }
 
+    private sealed class TextToolCallingStreamingClient : IStreamingChatClient
+    {
+        public List<ChatRequest> Requests { get; } = [];
+
+        public Task<ChatResponse> CompleteAsync(
+            ChatRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The non-streaming path was called.");
+
+        public async IAsyncEnumerable<ChatStreamEvent> StreamAsync(
+            ChatRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            if (Requests.Count == 1)
+            {
+                yield return new ChatToolCallDelta(
+                    0,
+                    0,
+                    "call",
+                    "capture",
+                    "first line\n",
+                    ToolInputKind.Text);
+                yield return new ChatToolCallDelta(
+                    0,
+                    0,
+                    "",
+                    "",
+                    "second line",
+                    ToolInputKind.Text);
+                yield return new ChatCandidateCompleted(0, FinishReason.ToolCalls);
+            }
+            else
+            {
+                yield return new ChatTextDelta(
+                    0,
+                    0,
+                    ChatRole.Assistant,
+                    "answer");
+                yield return new ChatCandidateCompleted(0, FinishReason.Stop);
+            }
+
+            await Task.Yield();
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+    }
+
+    private sealed class ChangedInputKindStreamingClient : IStreamingChatClient
+    {
+        public Task<ChatResponse> CompleteAsync(
+            ChatRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The non-streaming path was called.");
+
+        public async IAsyncEnumerable<ChatStreamEvent> StreamAsync(
+            ChatRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            yield return new ChatToolCallDelta(
+                0,
+                0,
+                "call",
+                "lookup",
+                "{}",
+                ToolInputKind.Text);
+            yield return new ChatToolCallDelta(
+                0,
+                0,
+                "",
+                "",
+                "{}",
+                ToolInputKind.Json);
+            yield return new ChatCandidateCompleted(0, FinishReason.ToolCalls);
+
+            await Task.Yield();
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+    }
+
     private sealed class RecordingToolExecutor : IToolExecutor
     {
         public RecordingToolExecutor()
         {
             using var schema = JsonDocument.Parse("{}");
-            Definitions = [new ToolDefinition("lookup", schema.RootElement)];
+            Definitions = [ToolDefinition.Json("lookup", schema.RootElement)];
         }
 
         public IReadOnlyList<ToolDefinition> Definitions { get; }
@@ -289,6 +417,35 @@ public sealed class AgentStreamingTests
             Call = Assert.Single(calls);
             Assert.Equal("{\"q\":\"x\"}", Call.Arguments);
             Result = new ToolResult(Call.CallId, "tool output");
+            IReadOnlyList<ToolResult> results = [Result];
+            return Task.FromResult(results);
+        }
+    }
+
+    private sealed class RecordingTextToolExecutor : IToolExecutor
+    {
+        public RecordingTextToolExecutor()
+        {
+            Definitions =
+                [ToolDefinition.Text("capture", "Captures text input.")];
+        }
+
+        public IReadOnlyList<ToolDefinition> Definitions { get; }
+
+        public ToolCall? Call { get; private set; }
+
+        public ToolResult? Result { get; private set; }
+
+        public Task<IReadOnlyList<ToolResult>> ExecuteAsync(
+            IEnumerable<ToolCall> calls,
+            CancellationToken cancellationToken = default)
+        {
+            Call = Assert.Single(calls);
+            Assert.Equal(ToolInputKind.Text, Call.InputKind);
+            Assert.Equal(
+                "first line\nsecond line",
+                Call.Arguments);
+            Result = new ToolResult(Call.CallId, "captured");
             IReadOnlyList<ToolResult> results = [Result];
             return Task.FromResult(results);
         }

@@ -33,7 +33,8 @@ internal sealed class ChatStreamAssembler
                 GetItem(toolCall).AppendToolCall(
                     toolCall.CallIdDelta,
                     toolCall.NameDelta,
-                    toolCall.ArgumentsDelta);
+                    toolCall.ArgumentsDelta,
+                    toolCall.InputKind);
                 break;
             case ChatCandidateCompleted completed:
                 GetCandidate(completed.CandidateIndex)
@@ -163,6 +164,7 @@ internal sealed class ChatStreamAssembler
         private readonly StringBuilder _messageText = new();
         private readonly StringBuilder _name = new();
         private readonly Dictionary<int, ReasoningSegmentBuffer> _segments = [];
+        private ToolInputKind? _inputKind;
         private ItemKind _kind;
         private ChatRole? _role;
         private OpaqueReasoningState? _state;
@@ -210,9 +212,17 @@ internal sealed class ChatStreamAssembler
         public void AppendToolCall(
             string callIdDelta,
             string nameDelta,
-            string argumentsDelta)
+            string argumentsDelta,
+            ToolInputKind inputKind)
         {
             SetKind(ItemKind.ToolCall);
+            if (_inputKind is not null && _inputKind != inputKind)
+            {
+                throw new InvalidOperationException(
+                    "A streamed Chat tool call changed its input kind.");
+            }
+
+            _inputKind = inputKind;
             _callId.Append(callIdDelta);
             _name.Append(nameDelta);
             _arguments.Append(argumentsDelta);
@@ -236,8 +246,10 @@ internal sealed class ChatStreamAssembler
 
         private ToolCall ToToolCall()
         {
+            var inputKind = _inputKind;
             if (string.IsNullOrWhiteSpace(_callId.ToString())
-                || string.IsNullOrWhiteSpace(_name.ToString()))
+                || string.IsNullOrWhiteSpace(_name.ToString())
+                || inputKind is null)
             {
                 throw new InvalidOperationException(
                     "The Chat stream ended with an incomplete tool call.");
@@ -246,7 +258,8 @@ internal sealed class ChatStreamAssembler
             return new ToolCall(
                 _callId.ToString(),
                 _name.ToString(),
-                _arguments.ToString());
+                _arguments.ToString(),
+                inputKind);
         }
 
         private void SetKind(ItemKind kind)

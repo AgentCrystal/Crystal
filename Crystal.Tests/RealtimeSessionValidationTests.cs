@@ -47,7 +47,7 @@ public sealed class RealtimeSessionValidationTests
                 [ContentModality.Text], RealtimeTurnMode.Explicit),
             new RealtimeSessionRequest(
                 [ContentModality.Text], RealtimeTurnMode.Automatic,
-                tools: [new ToolDefinition("caller-tool", schema.RootElement)]),
+                tools: [ToolDefinition.Json("caller-tool", schema.RootElement)]),
             new RealtimeSessionRequest(
                 [ContentModality.Text], RealtimeTurnMode.Automatic,
                 reasoning: new ReasoningOptions(effort: ReasoningEffort.Low))

@@ -27,7 +27,8 @@ public sealed class ToolExecutorCancellationTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => executor.ExecuteAsync(
-                [new ToolCall("call-1", "known", "{}")],
+                [new ToolCall(
+                    "call-1", "known", "{}", ToolInputKind.Json)],
                 cancellation.Token));
 
         Assert.Equal(0, tool.InvocationCount);
@@ -53,7 +54,8 @@ public sealed class ToolExecutorCancellationTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => executor.ExecuteAsync(
-                [new MultimodalToolCall("call-1", "known", "{}")],
+                [new MultimodalToolCall(
+                    "call-1", "known", "{}", ToolInputKind.Json)],
                 cancellation.Token));
 
         Assert.Equal(0, tool.InvocationCount);
@@ -71,8 +73,10 @@ public sealed class ToolExecutorCancellationTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => executor.ExecuteAsync(
                 [
-                    new ToolCall("call-1", "known", "{}"),
-                    new ToolCall("call-2", "known", "{}")
+                    new ToolCall(
+                        "call-1", "known", "{}", ToolInputKind.Json),
+                    new ToolCall(
+                        "call-2", "known", "{}", ToolInputKind.Json)
                 ],
                 cancellation.Token));
 
@@ -91,8 +95,10 @@ public sealed class ToolExecutorCancellationTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => executor.ExecuteAsync(
                 [
-                    new MultimodalToolCall("call-1", "known", "{}"),
-                    new MultimodalToolCall("call-2", "known", "{}")
+                    new MultimodalToolCall(
+                        "call-1", "known", "{}", ToolInputKind.Json),
+                    new MultimodalToolCall(
+                        "call-2", "known", "{}", ToolInputKind.Json)
                 ],
                 cancellation.Token));
 
@@ -120,7 +126,8 @@ public sealed class ToolExecutorCancellationTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => executor.ExecuteAsync(
-                [new ToolCall("call-1", "known", "{}")],
+                [new ToolCall(
+                    "call-1", "known", "{}", ToolInputKind.Json)],
                 cancellation.Token));
 
         Assert.False(mapperCalled);
@@ -148,7 +155,8 @@ public sealed class ToolExecutorCancellationTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => executor.ExecuteAsync(
-                [new MultimodalToolCall("call-1", "known", "{}")],
+                [new MultimodalToolCall(
+                    "call-1", "known", "{}", ToolInputKind.Json)],
                 cancellation.Token));
 
         Assert.False(mapperCalled);
@@ -161,7 +169,7 @@ public sealed class ToolExecutorCancellationTests
         public RecordingTextTool(string name, Action? onInvoke = null)
         {
             using var schema = JsonDocument.Parse("{}");
-            Definition = new ToolDefinition(name, schema.RootElement);
+            Definition = ToolDefinition.Json(name, schema.RootElement);
             _onInvoke = onInvoke;
         }
 
@@ -186,7 +194,7 @@ public sealed class ToolExecutorCancellationTests
         public RecordingMultimodalTool(string name, Action? onInvoke = null)
         {
             using var schema = JsonDocument.Parse("{}");
-            Definition = new ToolDefinition(name, schema.RootElement);
+            Definition = ToolDefinition.Json(name, schema.RootElement);
             _onInvoke = onInvoke;
         }
 

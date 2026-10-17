@@ -21,8 +21,12 @@ public sealed class ToolExecutorPreflightTests
             new ToolExecutionOptions(mode, maximumConcurrency));
         ToolCall[] calls =
         [
-            new("first", "known", "{}"),
-            new("second", "missing-secret-name", "{\"private\":true}")
+            new("first", "known", "{}", ToolInputKind.Json),
+            new(
+                "second",
+                "missing-secret-name",
+                "{\"private\":true}",
+                ToolInputKind.Json)
         ];
 
         var failure = await Assert.ThrowsAsync<ToolNotFoundException>(
@@ -46,8 +50,17 @@ public sealed class ToolExecutorPreflightTests
             new MultimodalToolExecutionOptions(mode, maximumConcurrency));
         MultimodalToolCall[] calls =
         [
-            new("first", "known", "{}", [new TextContent("input")]),
-            new("second", "missing-secret-name", "{\"private\":true}")
+            new(
+                "first",
+                "known",
+                "{}",
+                ToolInputKind.Json,
+                [new TextContent("input")]),
+            new(
+                "second",
+                "missing-secret-name",
+                "{\"private\":true}",
+                ToolInputKind.Json)
         ];
 
         var failure = await Assert.ThrowsAsync<MultimodalToolNotFoundException>(
@@ -63,7 +76,7 @@ public sealed class ToolExecutorPreflightTests
         public RecordingTextTool(string name)
         {
             using var schema = JsonDocument.Parse("{}");
-            Definition = new ToolDefinition(name, schema.RootElement);
+            Definition = ToolDefinition.Json(name, schema.RootElement);
         }
 
         public ToolDefinition Definition { get; }
@@ -84,7 +97,7 @@ public sealed class ToolExecutorPreflightTests
         public RecordingMultimodalTool(string name)
         {
             using var schema = JsonDocument.Parse("{}");
-            Definition = new ToolDefinition(name, schema.RootElement);
+            Definition = ToolDefinition.Json(name, schema.RootElement);
         }
 
         public ToolDefinition Definition { get; }

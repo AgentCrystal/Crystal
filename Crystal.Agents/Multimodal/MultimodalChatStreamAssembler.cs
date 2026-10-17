@@ -3,6 +3,7 @@ using System.Text;
 using Crystal.Multimodal.Chat;
 using Crystal.Multimodal.Tools;
 using Crystal.Reasoning;
+using Crystal.Tools;
 
 namespace Crystal.Multimodal.Agents;
 
@@ -47,7 +48,8 @@ internal sealed class MultimodalChatStreamAssembler
                 GetItem(toolCall).AppendToolCall(
                     toolCall.CallIdDelta,
                     toolCall.NameDelta,
-                    toolCall.ArgumentsDelta);
+                    toolCall.ArgumentsDelta,
+                    toolCall.InputKind);
                 break;
             case MultimodalToolCallContentReceived content:
                 GetItem(content).SetToolCallContent(
@@ -186,6 +188,7 @@ internal sealed class MultimodalChatStreamAssembler
         private readonly StringBuilder _name = new();
         private readonly Dictionary<int, ReasoningPartBuffer> _reasoningParts = [];
         private readonly Dictionary<int, MultimodalContent> _toolCallContents = [];
+        private ToolInputKind? _inputKind;
         private ItemKind _kind;
         private MultimodalChatRole? _messageRole;
         private bool _messageStarted;
@@ -251,9 +254,17 @@ internal sealed class MultimodalChatStreamAssembler
         public void AppendToolCall(
             string callIdDelta,
             string nameDelta,
-            string argumentsDelta)
+            string argumentsDelta,
+            ToolInputKind inputKind)
         {
             SetKind(ItemKind.ToolCall);
+            if (_inputKind is not null && _inputKind != inputKind)
+            {
+                throw new InvalidOperationException(
+                    "A streamed multimodal Chat tool call changed its input kind.");
+            }
+
+            _inputKind = inputKind;
             _callId.Append(callIdDelta);
             _name.Append(nameDelta);
             _arguments.Append(argumentsDelta);
@@ -303,8 +314,10 @@ internal sealed class MultimodalChatStreamAssembler
 
         private MultimodalToolCall ToToolCall()
         {
+            var inputKind = _inputKind;
             if (string.IsNullOrWhiteSpace(_callId.ToString())
-                || string.IsNullOrWhiteSpace(_name.ToString()))
+                || string.IsNullOrWhiteSpace(_name.ToString())
+                || inputKind is null)
             {
                 throw new InvalidOperationException(
                     "The multimodal Chat stream ended with an incomplete tool call.");
@@ -318,6 +331,7 @@ internal sealed class MultimodalChatStreamAssembler
                 _callId.ToString(),
                 _name.ToString(),
                 _arguments.ToString(),
+                inputKind,
                 contents);
         }
 

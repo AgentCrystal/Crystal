@@ -11,29 +11,48 @@ public sealed record ToolDefinition
     /// Initializes a tool definition.
     /// </summary>
     /// <param name="name">The stable case-sensitive tool name.</param>
-    /// <param name="inputSchema">The caller-authored JSON input schema.</param>
+    /// <param name="input">The caller-authored input contract.</param>
     /// <param name="description">
     /// Optional caller-authored descriptive text.
     /// </param>
     public ToolDefinition(
         string name,
-        JsonElement inputSchema,
+        ToolInput input,
         string? description = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
-
-        if (inputSchema.ValueKind is not (JsonValueKind.Object
-            or JsonValueKind.True or JsonValueKind.False))
-        {
-            throw new ArgumentException(
-                "Input schema must be a JSON object or boolean.",
-                nameof(inputSchema));
-        }
+        ArgumentNullException.ThrowIfNull(input, nameof(input));
 
         Name = name;
         Description = description;
-        InputSchema = inputSchema.Clone();
+        Input = input;
     }
+
+    /// <summary>
+    /// Initializes a JSON-input tool definition.
+    /// </summary>
+    /// <param name="name">The stable case-sensitive tool name.</param>
+    /// <param name="inputSchema">The caller-authored JSON input schema.</param>
+    /// <param name="description">
+    /// Optional caller-authored descriptive text.
+    /// </param>
+    public static ToolDefinition Json(
+        string name,
+        JsonElement inputSchema,
+        string? description = null) =>
+        new(name, new JsonToolInput(inputSchema), description);
+
+    /// <summary>
+    /// Initializes a text-input tool definition.
+    /// </summary>
+    /// <param name="name">The stable case-sensitive tool name.</param>
+    /// <param name="description">
+    /// Optional caller-authored descriptive text.
+    /// </param>
+    public static ToolDefinition Text(
+        string name,
+        string? description = null) =>
+        new(name, new TextToolInput(), description);
 
     /// <summary>
     /// Gets the stable case-sensitive name.
@@ -46,9 +65,9 @@ public sealed record ToolDefinition
     public string? Description { get; }
 
     /// <summary>
-    /// Gets a clone of the caller-authored JSON input schema.
+    /// Gets the caller-authored input contract.
     /// </summary>
-    public JsonElement InputSchema => field.Clone();
+    public ToolInput Input { get; }
 
     /// <inheritdoc />
     public override string ToString() => nameof(ToolDefinition);

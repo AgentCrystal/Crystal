@@ -18,7 +18,8 @@ change. Implementation must never become the only source of truth.
 
 - Crystal is a reusable C#/.NET library, not an application or hosted service.
 - The current release line supports text embedding, text completion, text chat,
-  text tool results, Agent execution, and Harness composition.
+  JSON-schema and unstructured-text tool input, text tool results, Agent
+  execution, and Harness composition.
 - An independent optional multimodal Embedding client accepts ordered typed
   text, image, audio, and video content inputs without widening text Embedding.
 - Completion and text or multimodal Chat may carry a caller-authored hard JSON
