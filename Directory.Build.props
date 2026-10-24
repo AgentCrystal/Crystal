@@ -5,6 +5,58 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <Authors>YELANDAOKONG</Authors>
+        <Copyright>Copyright (c) 2026 YELANDAOKONG</Copyright>
+        <Description>Provider-neutral C# contracts for text and multimodal model access, media generation, tools, Agents, and caller-owned composition.</Description>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/AgentCrystal/Crystal</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+        <PackageTags>AgentCrystal llm agents</PackageTags>
+        <RepositoryUrl>https://github.com/AgentCrystal/Crystal</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <DebugType>portable</DebugType>
+        <Deterministic>true</Deterministic>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <PackageId>AgentCrystal</PackageId>
+        <PackageId Condition="'$(MSBuildProjectName)' != 'Crystal'">AgentCrystal.$(MSBuildProjectName.Replace('Crystal.', ''))</PackageId>
     </PropertyGroup>
+
+    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Crystal'">
+        <Description>Core provider-neutral contracts for text and multimodal model access, embeddings, media values, generation, and live media sessions.</Description>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Crystal.Tools'">
+        <Description>Text and multimodal tool registration, policy, and execution. Crystal supplies no concrete tools.</Description>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Crystal.Agents'">
+        <Description>Text and multimodal model and tool loops with caller-configured limits.</Description>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Crystal.Harness'">
+        <Description>Composition of named Agents with shared caller-configured limits.</Description>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Crystal.Pipelines'">
+        <Description>Generic caller-owned middleware for typed asynchronous operations and event streams.</Description>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Crystal.Decorators'">
+        <Description>Middleware wrappers that preserve current Crystal client contracts and capability profiles.</Description>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Crystal.Workflows'">
+        <Description>Caller-defined typed workflow graphs with conditional edges and bounded concurrent steps.</Description>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'Crystal.Tests'">
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.402" PrivateAssets="All" />
+        <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+    </ItemGroup>
 
 </Project>

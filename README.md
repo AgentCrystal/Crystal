@@ -166,6 +166,32 @@ implements only the text, multimodal, or generation client interfaces it can
 honor. Provider selection, model identifiers, credentials, temperature, Top-P,
 and other wire options stay in that adapter.
 
+Source and release history: https://github.com/AgentCrystal/Crystal
+
+The core package is
+[AgentCrystal](https://www.nuget.org/packages/AgentCrystal). The other packages
+are [AgentCrystal.Tools](https://www.nuget.org/packages/AgentCrystal.Tools),
+[AgentCrystal.Agents](https://www.nuget.org/packages/AgentCrystal.Agents),
+[AgentCrystal.Harness](https://www.nuget.org/packages/AgentCrystal.Harness),
+[AgentCrystal.Pipelines](https://www.nuget.org/packages/AgentCrystal.Pipelines),
+[AgentCrystal.Decorators](https://www.nuget.org/packages/AgentCrystal.Decorators),
+and [AgentCrystal.Workflows](https://www.nuget.org/packages/AgentCrystal.Workflows).
+Assembly and namespace names remain `Crystal` and `Crystal.*`.
+
+~~~bash
+dotnet add package AgentCrystal
+~~~
+
+Branch roles: `master` is development. `test` runs the tests only. `release`
+runs the tests and publishes the tag on the pushed commit: `Bx.x.x` becomes
+`x.y.z-beta`, and `Rx.x.x` becomes `x.y.z`. Versions come from tags and are
+never written in source. Push the branch and its tag in the same command.
+
+Publishing uses NuGet trusted publishing. Configure a nuget.org trusted
+publishing policy for repository owner `AgentCrystal`, repository `Crystal`, and
+workflow file `publish.yml`, and set the repository secret `NUGET_USER` to the
+nuget.org profile name. No long-lived API key is stored.
+
 During local development, a consumer can reference the project directly:
 
 ~~~xml

@@ -56,6 +56,35 @@
 - CollectionSnapshot is shared as linked internal source. Do not make common
   implementation helpers public merely to cross an assembly boundary.
 
+## Packaging
+
+- The core Crystal assembly is package id AgentCrystal. Every other production
+  assembly uses AgentCrystal plus its existing suffix, such as AgentCrystal.Tools.
+  Assembly names and namespaces remain Crystal and Crystal.*.
+- Crystal.Tests is not a package.
+- Authors, license, repository, readme, and Source Link settings live in
+  Directory.Build.props. Never store a package version in source or
+  documentation. The release workflow reads the version from the tag.
+- Package and readme links use https://github.com/AgentCrystal/Crystal. Publish
+  the tagged commit before making the repository public, so Source Link can
+  resolve.
+- Microsoft.SourceLink.GitHub is a private build dependency and must not flow to
+  package consumers.
+- Do not enable GeneratePackageOnBuild. ContinuousIntegrationBuild is set only
+  when CI is true, including GitHub Actions. Local builds do not pass it.
+- .github/workflows/test.yml runs the Release tests on pushes to test and
+  publishes nothing. .github/workflows/publish.yml runs the same tests on pushes
+  to release and then packs and publishes. Bx.x.x publishes
+  major.minor.patch-beta; Rx.x.x publishes major.minor.patch. A release push
+  without either tag fails. The tag supplies the package version and release
+  note.
+- Publishing uses NuGet trusted publishing through GitHub OIDC. The nuget.org
+  policy names repository owner AgentCrystal, repository Crystal, and workflow
+  file publish.yml. The repository secret NUGET_USER holds the nuget.org profile
+  name. Do not add or commit a long-lived API key. Request the temporary key
+  only after packing, because it expires after one hour.
+- Project references become NuGet dependencies at the shared package version.
+
 ## C# conventions
 
 - Use PascalCase for types and public members, camelCase for locals and

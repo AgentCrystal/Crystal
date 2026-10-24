@@ -51,6 +51,13 @@ Consumers reference only the layers required by their use case. A provider
 adapter can implement text, multimodal, or generation capabilities without
 depending on tool execution, Agent runtime, or Harness composition.
 
+NuGet package ids keep the same boundaries. AgentCrystal is the core Crystal
+assembly. The other production packages are AgentCrystal.Tools,
+AgentCrystal.Agents, AgentCrystal.Harness, AgentCrystal.Pipelines,
+AgentCrystal.Decorators, and AgentCrystal.Workflows. Assembly names stay
+unchanged. Source and package links use https://github.com/AgentCrystal/Crystal.
+Package versions come from release tags, not from source files.
+
 ## Current capabilities
 
 ### Embedding

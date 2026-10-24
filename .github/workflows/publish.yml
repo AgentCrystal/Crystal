@@ -1,0 +1,72 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - release
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Resolve the version tag
+        id: version
+        run: |
+          set -euo pipefail
+          tag="$(git describe --tags --exact-match --match 'R[0-9]*' --match 'B[0-9]*' HEAD || true)"
+          if [[ -z "${tag}" ]]; then
+            echo "Tag the pushed commit as Bx.x.x or Rx.x.x before pushing it to release."
+            exit 1
+          fi
+          case "${tag}" in
+            R*) prefix="R"; suffix="" ;;
+            B*) prefix="B"; suffix="-beta" ;;
+            *) echo "Tag ${tag} must be Bx.x.x or Rx.x.x."; exit 1 ;;
+          esac
+          version="${tag#"${prefix}"}"
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag ${tag} must be ${prefix}x.y.z."
+            exit 1
+          fi
+          echo "version=${version}${suffix}" >> "${GITHUB_OUTPUT}"
+          echo "notes=${tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Test
+        run: dotnet test Crystal.Tests/Crystal.Tests.csproj -c Release --nologo
+
+      - name: Pack
+        run: dotnet pack Crystal.sln -c Release -o artifacts --nologo -p:Version="${{ steps.version.outputs.version }}" -p:PackageReleaseNotes="${{ steps.version.outputs.notes }}"
+
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push packages
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(artifacts/*.nupkg)
+          if [[ "${#packages[@]}" -eq 0 ]]; then
+            echo "No packages were produced."
+            exit 1
+          fi
+          for package in "${packages[@]}"; do
+            dotnet nuget push "${package}" \
+              --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
