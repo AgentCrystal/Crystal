@@ -16,6 +16,8 @@ text interfaces remain unchanged and text-only.
 - Ordered readable and opaque reasoning preservation.
 - Caller-authored hard JSON Schema requirements for final text output.
 - Explicit media ownership, MIME types, and typed modality capabilities.
+- Whole-file blocks with an explicit MIME type and optional file name for
+  multimodal Chat, Tool, and Embedding.
 - Independent optional multimodal Embedding over ordered typed content inputs.
 - Independent target-output image, audio, and video generation clients.
 - Separate live duplex media session contracts with exact segments and tool
@@ -292,8 +294,13 @@ for each attempt, and the consumer disposes each returned stream.
 
 An adapter may additionally implement IStreamingMultimodalChatClient. Streams
 start messages explicitly, use stable indexes for message content, reasoning
-parts, and tool-call content, and emit image, audio, and video blocks as complete
-typed content events rather than byte chunks.
+parts, and tool-call content, and emit image, audio, video, and file blocks as
+complete typed content events.
+
+Use `new FileContent(new FileMedia(source, new MediaMimeType("application/pdf"), "report.pdf"))`
+for a PDF received from a caller-owned source. Adapter capabilities advertise
+file source kinds. The configured adapter validates supported formats and other
+file limits.
 
 ### Image, audio, and video generation
 
@@ -397,6 +404,28 @@ public static class DirectModelExample
     }
 }
 ~~~
+
+### Decisions
+
+`IDecisionClient` evaluates ordered questions over shared text or structured
+JSON. `IMultimodalDecisionClient` adds ordered typed media, including files.
+Either client can accept its corresponding ordered Chat transcript as evidence
+when advertised. Questions can carry their own instructions and criteria.
+
+~~~csharp
+using Crystal.Decisions;
+using Crystal.Decisions.Questions;
+
+var request = new DecisionRequest(
+    [new DecisionContent<string>(message)],
+    [new PredicateQuestion<string>("billing", [new("Is this about billing?")])]);
+var response = await client.DecideAsync(request, cancellationToken);
+~~~
+
+A response contains one predicate, choice, score, or refusal result per
+question, or describes a block affecting the entire request. The adapter
+declares supported evidence and criteria positions. Callers decide what to do
+with the reported probabilities, confidence, and scores.
 
 ### Tools and Agent
 

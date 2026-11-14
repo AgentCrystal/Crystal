@@ -29,9 +29,9 @@ library's public API.
 ## Production assemblies
 
 - Crystal contains provider-adapter contracts, the text and multimodal protocol
-  foundations, media values, multimodal Embedding, and immediate, streaming,
-  resumable operation, and batch generation clients, and live media session
-  contracts.
+  foundations, media values, multimodal Embedding, text and multimodal Decision,
+  immediate, streaming, resumable operation, and batch generation clients,
+  and live media session contracts.
 - Crystal.Tools adds independent text and multimodal tool registration, policy,
   and execution families.
 - Crystal.Agents adds independent text and multimodal model/tool loops with
@@ -70,7 +70,7 @@ Package versions come from release tags, not from source files.
 ### Multimodal Embedding
 
 - An independent optional client; text Embedding remains text-only.
-- Each input contains non-empty ordered typed text, image, audio, or video
+- Each input contains non-empty ordered typed text, image, audio, video, or file
   content, and a request contains a non-empty ordered batch of inputs.
 - Coarse input capabilities advertise individual modalities and media source
   shapes. Adapters reject unsupported requests and return exactly one vector
@@ -94,6 +94,22 @@ Package versions come from release tags, not from source files.
 - Multiple candidates and open-ended finish reasons.
 - Non-streaming and optional typed streaming client contracts.
 
+### Decisions
+
+- Independent text and multimodal clients evaluate one body of shared evidence
+  against a non-empty ordered collection of caller-authored questions.
+- Text and native structured JSON are supported contract shapes in both
+  profiles. The multimodal profile also describes typed media. Callers can
+  explicitly supply ordered Chat items as shared evidence.
+- Predicate, choice, and score questions preserve scoped instructions and
+  criteria. Choice values retain string or boolean identity. Score levels use
+  zero-based rubric order.
+- Responses preserve one result per question, including individual refusals,
+  or a whole-request block. Probabilities, confidence, and expected scores are
+  service-reported. Callers choose thresholds and subsequent actions.
+- Adapters declare their supported individual shapes and enforce combinations.
+  Image localization remains an adapter capability.
+
 ### Structured final text
 
 - Caller-authored JSON Schema is an optional hard output requirement for
@@ -106,8 +122,11 @@ Package versions come from release tags, not from source files.
 
 ### Media and multimodal Chat
 
-- Closed portable text, image, audio, and video content modalities.
+- Closed portable text, image, audio, video, and file content modalities.
 - Explicit MIME types and typed image, audio, and video metadata.
+- Whole files carry an explicit MIME type and an optional caller- or
+  adapter-supplied file name. They use the same source shapes as other media
+  and are first-class ordered content in multimodal Chat, Tool, and Embedding.
 - Immutable inline bytes, caller-owned absolute URIs, and replayable stream
   factories with explicit ownership and optional expiration metadata.
 - Coarse input and output capabilities that include accepted media source shapes.
@@ -322,7 +341,7 @@ a tool is an explicit caller decision.
 
 The current release does not include:
 
-- generic binary attachments, PDFs, or general file-content bags;
+- generic attachment bags, file parsing, and provider file management;
 - automatic URI fetching, media upload, download, transcoding, or caching;
 - built-in providers, authentication, transport, or model catalogs;
 - built-in prompts, personas, templates, repair messages, or summaries;
@@ -340,9 +359,10 @@ Multimodal and media-generation support is additive:
 
 - text-only interfaces remain text-only;
 - multimodal Chat, Tool, Agent, and Harness families are independent;
-- image, audio, and video are typed first-class values rather than attachments;
+- image, audio, video, and file are typed first-class values;
 - generation clients are separated by target output while accepting a shared
-  closed set of typed conditioning inputs;
+  closed set of typed conditioning inputs. Files are outside media generation
+  and the realtime input/output segment protocol;
 - capability profiles state portable individual input and output shapes, while
   adapters validate model-specific combinations and cardinality;
 - provider options remain on adapter APIs rather than in extension dictionaries;

@@ -42,9 +42,9 @@ No Crystal assembly depends on external implementations.
 
 ### Crystal
 
-Owns cross-capability primitives, Reasoning, Embeddings, Completions, text Chat,
-media sources and values, typed multimodal content, Chat, Embedding, and live
-sessions,
+Owns cross-capability primitives, Reasoning, Embeddings, Completions, Decisions,
+text Chat, media sources and values, typed multimodal content, Chat, Embedding,
+and live sessions,
 immediate, streaming, resumable-operation, and batch image, audio, and video
 generation, and all model-facing text and multimodal tool
 protocol values. Keeping protocol values in Crystal lets provider adapters
@@ -241,7 +241,7 @@ Opaque state:
 ### Crystal.Media
 
 Owns explicit MIME types, codecs, dimensions, aspect ratios, and typed image,
-audio, and video values. Media data is carried by one of three closed source
+audio, video, and file values. Media data is carried by one of three closed source
 shapes:
 
 - InlineMediaSource owns a private copy and returns copies to callers;
@@ -258,11 +258,14 @@ ExpiresAt value without Crystal refreshing or fetching them.
 Media values contain no file paths, provider resource identifiers, transport
 DTOs, or automatic upload/download behavior. MIME is explicit. Optional media
 metadata describes known facts and is not inferred by Crystal.
+FileMedia describes one complete file with an explicit MIME type and optional
+exact file name. The file name is metadata. Source access uses only the
+supplied MediaSource.
 
 ### Crystal.Multimodal
 
-Owns the closed portable text, image, audio, and video content hierarchy, media
-source-aware content capabilities, and multimodal reasoning content. It also
+Owns the closed portable text, image, audio, video, and file content hierarchy,
+media source-aware content capabilities, and multimodal reasoning content. It also
 owns an independent non-streaming and optional typed streaming Chat family under
 Crystal.Multimodal.Chat and model-facing multimodal tool calls and results under
 Crystal.Multimodal.Tools.
@@ -274,6 +277,8 @@ preserves ordered readable typed parts, each with an open summary/trace
 classification, plus opaque continuation state. The
 multimodal Chat client advertises coarse individual input and output shapes.
 Role-specific, cardinality, and conditional model rules remain adapter-owned.
+FileContent uses the same ordered content positions and source-kind capability
+profiles in Chat, Tool, and multimodal Embedding.
 
 ### Crystal.Generation
 
@@ -288,6 +293,7 @@ source, mask, first frame, and last frame. Image, audio, and video inputs remain
 typed, including audio reference or source inputs supplied to video generation.
 Editing or transformation is conditioned generation through source and mask
 inputs; Crystal has no universal edit mode or edit client.
+Generation capabilities, content items, and readable reasoning exclude files.
 
 Requirements are hard constraints. An adapter must reject a requirement or input
 combination it cannot honor and must not silently drop, approximate, reorder,
@@ -347,7 +353,11 @@ adapter rejects unsupported combinations and maps provider controls itself.
 One IRealtimeMediaSession accepts serialized SendAsync calls while exactly one
 ReceiveAsync enumeration may overlap them. RealtimeInputContent carries a
 complete typed text or independently decodable media segment, with optional
-non-negative media offset. RealtimeInputTurnEnded is valid for explicit turn
+non-negative media offset. Live input and output segments and readable reasoning
+exclude files.
+Initial Chat context and multimodal tool payloads use their existing contracts;
+adapters validate whether a session accepts those payloads.
+RealtimeInputTurnEnded is valid for explicit turn
 mode. Tool results use the exact correlated MultimodalToolResult value.
 Output content events preserve exact typed segments with stable output ID and
 zero-based per-output segment indexes; interleaved outputs retain event order.
@@ -396,6 +406,42 @@ output requirement. It is independent of the tool input definition and does
 not change message, tool, reasoning, or stream event shapes. Agents and
 Harnesses forward its exact value through every model turn. Crystal does not
 parse or repair provider output and never injects a formatting prompt.
+
+### Crystal.Decisions and Crystal.Multimodal.Decisions
+
+The independent Decision clients expose one cancellable DecideAsync operation.
+Each request snapshots an ordered non-empty question sequence with unique
+case-sensitive IDs. Shared evidence is either ordered content blocks or an
+explicit ordered transcript using the corresponding Chat protocol values.
+Transcripts preserve the original items, roles, and tool correlation, and serve
+as evidence to evaluate. The operation does not continue a conversation.
+
+Both profiles use the same question types parameterized by their content type.
+The non-media profile uses exact strings and native JSON object or array blocks.
+The multimodal profile uses the existing MultimodalContent hierarchy and the
+same structured JSON block. DecisionContent snapshots JSON without interpreting
+or rendering it. Shared evidence, question instructions, predicate outcome
+criteria, choice criteria, and score criteria retain their own block order
+and scope. Choice values distinguish exact strings from booleans. The numeric
+value of a score level is its zero-based position. An optional label is
+preserved separately from the level criteria.
+
+The capability profiles declare the supported question kinds, non-media shapes
+by position, transcript support, and boolean choice support. The multimodal
+profile also declares media modality and source kinds by position. These are
+individual shapes. Adapters validate supported combinations, the contents of
+transcripts, and provider-dependent limits without silently changing evidence.
+
+A complete response is constructed against its request. The response checks
+one result per question in request order, with matching ID and result type.
+Choice probabilities match the original option values and order. For score
+probabilities, the response checks the rubric length and the adapter maps
+values to their original positions. The reported numeric values are kept as
+received, with finite unit-interval validation for
+probabilities and confidence. Each question can instead carry a refusal. A
+whole-request block is a separate response state with no results. Neither the
+clients nor the data contracts apply thresholds, execute actions, or choose a
+model or fallback.
 
 ### Crystal.Multimodal.Embeddings
 
@@ -590,8 +636,8 @@ additionally carry a text-segment index; every delta for one semantic segment
 uses the same index. Multimodal message content, reasoning parts, and tool-call
 content carry stable zero-based indexes. A message-started event preserves its
 role and permits an empty content sequence. Text blocks may arrive as exact
-deltas or as one complete content event. Image, audio, and video arrive as one
-complete content event; this contract does not stream media bytes.
+deltas or as one complete content event. Each image, audio, video, or file block
+arrives as one complete content event. Chat streams do not stream media bytes.
 
 Identifier, name, argument, text, and reasoning deltas are explicitly identified
 as deltas; adapters must not pretend partial data is complete. A content-received
@@ -634,7 +680,7 @@ The current media architecture is additive:
 
 - existing text contracts remain valid and text-only;
 - multimodal Chat, Tool, Agent, and Harness APIs are independent families;
-- typed image, audio, and video values replace an untyped attachment bag;
+- image, audio, video, and file values have distinct content types;
 - inline-copy, absolute-URI, and replayable-stream ownership is explicit;
 - target-output generation clients remain separate;
 - closed typed inputs can condition every generation target when an adapter

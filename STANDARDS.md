@@ -7,7 +7,7 @@
 - Keep authoritative documents synchronized with material behavior changes.
 - Runtime and exception text is plain English.
 - Crystal-authored diagnostics exclude credentials, prompt text, reasoning text,
-  opaque state, raw tool arguments, media bytes, media URIs, tool exception
+  opaque state, raw tool arguments, media bytes, media URIs, file names, tool exception
   details, and stack traces.
 - Public protocol values that can contain caller- or model-authored text use
   content-free default string representations.
@@ -184,6 +184,20 @@ Tests must prove:
   returns exact text or multimodal output.
 - Unsupported provider semantics fail at the adapter boundary.
 
+## Decisions
+
+- Snapshot shared evidence, scoped blocks, questions, and results in order.
+  Keep native JSON separate from text and clone JSON values at the boundary.
+- Validate case-sensitive question identity, typed choice identity, ordered
+  rubric cardinality, and finite probability and confidence values. Preserve
+  provider-reported scores and confidence without deriving or normalizing them.
+- Preserve per-question refusals as ordered results and represent an input
+  block as a whole-request outcome. Protocol failures and cancellation remain
+  exceptions.
+- The text and multimodal clients are independent. Support declarations stay
+  coarse. External adapters enforce content placement, combinations, and
+  provider limits and never rewrite model-bound decision evidence.
+
 ## Media and generation
 
 - Content modalities and generation input purposes are closed portable values.
@@ -196,8 +210,10 @@ Tests must prove:
   refreshes an expiring source or infers an expiration.
 - Replayable stream factories return a fresh readable stream at its beginning on
   every call; ownership transfers to the caller of OpenReadAsync.
-- Image, audio, and video values require an explicit MIME type. Optional metadata
-  reports known facts and is never inferred by runtime code.
+- Image, audio, video, and file values require an explicit MIME type. Optional
+  metadata reports known facts and is never inferred by runtime code.
+- File blocks carry a complete source and may preserve an exact file name.
+  Runtime code does not derive a source path from the file name.
 - Multimodal Embedding preserves ordered typed blocks within each input and
   ordered inputs within each batch. Adapters return one vector per input in the
   same order and reject unsupported combinations without rewriting media.
@@ -212,7 +228,8 @@ Tests must prove:
 - Empty generation input, candidate, and item sequences remain valid portable
   structures. Adapters do not invent candidates or finish reasons.
 - Image, audio, and video generation clients remain independent target-output
-  contracts. Editing is expressed through typed source and mask inputs.
+  contracts. Editing is expressed through typed source and mask inputs. Media
+  generation and realtime input/output segments exclude the file modality.
 - Immediate single-request, batch, streaming, resumable-operation, and realtime
   APIs remain separate.
 - Remote operation tickets copy opaque bytes and reveal neither those bytes nor

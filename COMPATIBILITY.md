@@ -49,6 +49,40 @@ portable individual input and output shapes; they are not a conditional-rule or
 model-constraint language. Adapters validate model-specific combinations,
 cardinality, size, duration, and other constraints.
 
+## Decision compatibility
+
+Decision capability profiles describe individual question and input shapes.
+Adapters reject unsupported combinations before sending a request. This
+includes position-specific content, transcript items, native JSON shapes,
+boolean options, descriptions, score labels, and service limits. Request
+blocks retain their order and scope. A wire representation may encode the
+supplied values in a different shape when it preserves their meaning. It
+must not prepend instructions, flatten structured evidence into a text
+fallback, or move criteria to another scope.
+
+Map provider answers to the original unique caller question IDs. For a
+name-keyed response, restore request order explicitly. Return a matching
+typed result or a refusal for every question. An input block affecting the
+whole request maps to DecisionResponse.Blocked. Missing, duplicate, unknown,
+or mismatched answers without such a block indicate an adapter or provider
+failure. Map option probabilities by exact value, including value type, and
+score probabilities by zero-based level. Preserve the reported selection,
+score, and optional confidence independently of probabilities. Do not
+compute confidence from the distribution or renormalize it.
+
+The [TypeSafe System One schema](https://api.typesafe.ai/openapi.json) and
+[Gemini Decisions reference](https://aistudio.google.com/api-reference/decisions)
+use name-keyed question and result maps. The
+[OpenAI Decisions reference](https://developers.openai.com/api/reference/resources/decisions/methods/create)
+uses ordered questions and results and documents typed string and boolean
+choice values and per-question refusals. Gemini documents whole-input blocking.
+TypeSafe accepts structured JSON evidence and criteria. OpenAI accepts
+structured JSON blocks in evidence and instructions. Gemini documents document
+input including PDF. The adapter advertises only content shapes it can honor
+in the specified positions. For example, a client accepting images as shared
+evidence need not accept images in score criteria. Image localization,
+provider-native settings, and model selection remain adapter responsibilities.
+
 ## Structured final text requirement
 
 JsonOutputRequirement is a caller-authored JSON Schema and a hard output
@@ -199,7 +233,7 @@ indexes must remain stable and contiguous so the stream can be assembled
 without inferred content.
 
 IMultimodalChatClient is a separate profile. It can preserve readable text,
-image, audio, and video reasoning content plus opaque continuation state.
+image, audio, video, and file reasoning content plus opaque continuation state.
 IStreamingMultimodalChatClient adds optional typed streaming without changing
 that complete-response contract. An adapter must advertise the individual input
 and output modalities and media source shapes it supports. It must still validate
@@ -208,14 +242,14 @@ provider-specific role, combination, and cardinality rules for each request.
 A multimodal stream starts each message explicitly so its role and an empty
 content sequence remain representable. Text content may be emitted as deltas.
 Complete content events carry one exact TextContent, ImageContent, AudioContent,
-or VideoContent value and cannot be mixed with text deltas at the same index.
+VideoContent, or FileContent value and cannot be mixed with text deltas at the same index.
 Reasoning parts use the same rule and retain their classification. Tool-call
 identifier, name, and raw arguments remain deltas, while optional tool-call
 content arrives as complete indexed content blocks.
 
 ## Media source compatibility
 
-- Every image, audio, and video value has an explicit MIME type. Adapters must not
+- Every image, audio, video, and file value has an explicit MIME type. Adapters must not
   infer a different representation and silently rewrite the value.
 - InlineMediaSource contains a complete immutable copy.
 - UriMediaSource is an absolute caller value. Crystal never fetches it; an adapter
@@ -225,8 +259,21 @@ content arrives as complete indexed content blocks.
 - Length and ExpiresAt preserve reported source facts. Crystal does not refresh,
   resolve, or fetch an expiring source.
 - File paths and provider media identifiers remain external-adapter concerns.
+- FileContent describes one complete file. Adapters validate the requested
+  modality, source shape, file MIME type, and provider-specific limits. If an
+  optional supplied file name cannot be honored, the adapter rejects the
+  request under the common capability rule.
+- File blocks are available to multimodal Chat, Tool, and Embedding. Media
+  generation, live input/output segments, and live readable reasoning exclude
+  files. Adapters validate whether live sessions support files in supplied Chat
+  context or tool payloads.
 - Adapter errors and diagnostics must not include media bytes or media URIs by
   default.
+
+The [OpenAI file input guide](https://developers.openai.com/api/docs/guides/file-inputs)
+documents endpoint-specific file formats and source shapes. The
+[Gemini embedding guide](https://ai.google.dev/gemini-api/docs/embeddings)
+documents PDF input with model-specific size and combination limits.
 
 ## Immediate generation compatibility
 
@@ -393,7 +440,7 @@ accepted input in the same order. It must not silently omit rejected inputs.
 Dimensions are reported by each vector and are not hard-coded by Crystal.
 
 IEmbeddingClient remains text-only. IMultimodalEmbeddingClient is an independent
-optional profile for ordered typed text, image, audio, and video input. Each
+optional profile for ordered typed text, image, audio, video, and file input. Each
 embedding input retains its content-block order, and each request retains its
 input order. An adapter must return exactly one vector per request input in
 that same order; it must reject an unsupported modality, media source shape,
@@ -408,8 +455,8 @@ combination or batch size is supported by the configured model.
 
 Capabilities advertise individual accepted modalities and source shapes, not
 every combination. Media sources retain their existing ownership and expiration
-semantics. Crystal does not fetch, transcode, or inspect them. PDFs and generic
-attachments are outside this profile.
+semantics. Crystal does not fetch, transcode, or inspect them. A PDF can be
+carried as FileContent with MIME type application/pdf when the adapter supports it.
 TokenUsage is present only when provider-reported token accounting is
 semantically available for the complete request; media billing units are not
 silently converted into tokens.
